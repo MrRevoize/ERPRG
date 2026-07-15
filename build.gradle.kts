@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("org.springframework.boot") version "4.1.0"
     application
 }
 
@@ -18,6 +19,16 @@ java {
 
 tasks.jar {
     enabled = false
+}
+application {
+    mainClass.set("org.example.Main")
+}
+
+tasks.bootJar {
+    enabled = true
+    archiveClassifier.set("")
+    archiveFileName.set("app.jar")
+    mainClass.set("org.example.Main")
 }
 
 dependencies {

@@ -1,33 +1,20 @@
-# Этап 1: Сборка приложения
-FROM gradle:jdk25 AS builder
-
-# Определение рабочей директории для сборки
+FROM gradle:9.3-jdk25-alpine AS build
 WORKDIR /app
 
-# Копирование файлов сборки Gradle для кеширования зависимостей
-COPY gradle .
-COPY gradle gradle
-COPY settings.gradle.kts .
-# Если есть build.gradle.kts, раскомментируйте строку ниже:
-# COPY build.gradle.kts .
+COPY build.gradle.* settings.gradle.* gradle.properties* ./
+COPY gradle/ gradle/
+COPY gradlew ./
 
-# Загрузка зависимостей (кеширование)
-RUN ./gradlew dependencies --no-daemon
+RUN chmod +x ./gradlew
+RUN ./gradlew dependencies --no-daemon --parallel
 
-# Копирование исходного кода
-COPY src ./src
+COPY src/ src/
+RUN ./gradlew build -x test --no-daemon --parallel --build-cache
 
-# Сборка проекта (jar-файла)
-RUN ./gradlew bootJar --no-daemon || ./gradlew jar --no-daemon
-
-# Этап 2: Запуск приложения
 FROM eclipse-temurin:25-jre-alpine
-
-# Определение рабочей директории для запуска
 WORKDIR /app
+COPY --from=build /app/build/libs/*.jar app.jar
 
-# Копирование собранного jar-файла из первого этапа
-COPY --from=builder /app/build/libs/*.jar app.jar
-
-# Команда для запуска приложения
-ENTRYPOINT ["java", "-jar", "app.jar"]
+RUN ls -la /app
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
